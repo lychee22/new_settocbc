@@ -1,1 +1,1 @@
-export { sendRequest, sendAuthRequest, login } from './request';
+export { sendRequest, sendAuthRequest, login, getSystemInfo, logout } from './request';

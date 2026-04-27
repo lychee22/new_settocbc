@@ -37,6 +37,18 @@ export interface UserSession {
   entityCode: string;
   entityName: string;
   securityID?: string;
+  systemCode?: string;
+  localCcy?: string;
+}
+
+// 系统信息 (来自 sysParamSetupGridMsg_GetSysDate)
+export interface SystemInfo {
+  sysdate: string;        // 系统日期 (YYYYMMDD)
+  entityCode: string;     // 机构代码
+  entityName: string;     // 机构名称
+  systemCode: string;     // 系统代码 (如 MFXDBMAIN)
+  localCcy: string;      // 本地货币
+  sysEnv?: string;       // 系统环境 (如 Development)
 }
 
 // 菜单项

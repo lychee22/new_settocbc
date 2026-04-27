@@ -1,4 +1,5 @@
-import type { NetMessage } from '../types';
+import type { NetMessage, SystemInfo } from '../types';
+import { useAuthStore } from '../stores/authStore';
 
 // Base64 编码
 const base64Encode = (str: string): string => {
@@ -58,7 +59,7 @@ export async function sendRequest<T = unknown>(
     sts: 0,
     sq: 0,
     scsts: 0,
-    v: '1.0.0',
+    v: '1.2.20260409.2059',
     bm: 0,
   };
 
@@ -74,6 +75,7 @@ export async function sendRequest<T = unknown>(
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: `sfNetMessage=${encodeURIComponent(payload)}`,
+    credentials: 'include',
     signal: options?.signal,
   });
 
@@ -92,7 +94,9 @@ export async function sendRequest<T = unknown>(
   const result = JSON.parse(decoded) as NetMessage;
 
   if (result.sts !== 0) {
-    throw new Error(result.e || 'Request failed');
+    // 显示后端返回的原始错误信息
+    const errorMsg = result.e || `Request failed with status ${result.sts}`;
+    throw new Error(errorMsg);
   }
 
   return result as T;
@@ -107,6 +111,8 @@ export async function sendAuthRequest<T = unknown>(
     loginID: string;
     sessionKey: string;
     securityID?: string;
+    language?: number;
+    env?: string;
   }
 ): Promise<T> {
   const enrichedMessage = {
@@ -115,6 +121,14 @@ export async function sendAuthRequest<T = unknown>(
     uid: session.loginID,
     snk: session.sessionKey,
     scid: session.securityID || '',
+    euc: 1,
+    uc: 1,
+    acc: '?',
+    ch: null,
+    l: session.language ?? 0,
+    env: session.env || '',
+    extuid: null,
+    t: '?',
   };
 
   return sendRequest<T>(enrichedMessage as NetMessage);
@@ -127,7 +141,7 @@ export async function login(
   loginID: string,
   password: string,
   language: number = 0
-): Promise<Response> {
+): Promise<{ ok: boolean; sessionKey?: string; error?: string }> {
   // 使用与旧系统相同的密码加密算法
   const encodedPassword = securityEncode(password);
 
@@ -137,7 +151,7 @@ export async function login(
     sfUserLanguage: language.toString(),
   });
 
-  return fetch('/BOAppLoginServlet', {
+  const response = await fetch('/BOAppLoginServlet', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -145,10 +159,77 @@ export async function login(
     body: params,
     credentials: 'include',
   });
+
+  console.log('-----response:', response)
+  if (!response.ok) {
+    return { ok: false, error: `HTTP error ${response.status}` };
+  }
+
+  const responseText = await response.text();
+
+  // 尝试从响应 HTML 中提取 sessionKey
+  // 旧系统通过 JSP 嵌入 sessionKey 到 JavaScript
+  let sessionKey = '';
+  try {
+    // 尝试匹配 var cache._sessionKey = "xxx" 或类似模式
+    const match = responseText.match(/cache\._sessionKey\s*=\s*["']([^"']+)["']/);
+    if (match) {
+      sessionKey = match[1];
+    }
+  } catch {
+    // ignore
+  }
+
+  return { ok: true, sessionKey };
+}
+
+/**
+ * 获取系统信息 (sysParamSetupGridMsg_GetSysDate)
+ */
+export async function getSystemInfo(): Promise<SystemInfo> {
+  const session = useAuthStore.getState().session;
+
+  const result = await sendAuthRequest<NetMessage>(
+    { n: 'sysParamSetupGridMsg_GetSysDate' },
+    {
+      loginID: session?.loginID || '',
+      sessionKey: session?.sessionKey || '',
+      securityID: session?.securityID,
+      language: session?.language,
+      env: session?.env,
+    }
+  );
+
+  if (result.hvb && result.hvb.length > 0) {
+    const data = result.hvb[0] as unknown as SystemInfo;
+    return data;
+  }
+
+  throw new Error('Failed to get system info');
+}
+
+/**
+ * 登出请求 (loginSessionGridMsg_Logout)
+ */
+export async function logout(): Promise<void> {
+  const session = useAuthStore.getState().session;
+
+  await sendAuthRequest(
+    { n: 'loginSessionGridMsg_Logout' },
+    {
+      loginID: session?.loginID || '',
+      sessionKey: session?.sessionKey || '',
+      securityID: session?.securityID,
+      language: session?.language,
+      env: session?.env,
+    }
+  );
 }
 
 export default {
   sendRequest,
   sendAuthRequest,
   login,
+  getSystemInfo,
+  logout,
 };

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { Form, Input, Button, Select, message, Card } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Form, Input, Button, Select, Checkbox, message, Card } from 'antd';
 import { UserOutlined, LockOutlined, GlobalOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { login as loginApi } from '../../api/request';
 import { useAuthStore } from '../../stores/authStore';
+import { getSavedUsername, saveUsername } from '../../utils/storage';
 
 const { Option } = Select;
 
@@ -11,47 +12,53 @@ interface LoginForm {
   username: string;
   password: string;
   language: number;
+  rememberMe?: boolean;
 }
 
 const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
+  const [savedUsername, setSavedUsername] = useState('');
   const navigate = useNavigate();
   const { login: setAuthLogin } = useAuthStore();
+
+  // Load saved username on mount
+  useEffect(() => {
+    const username = getSavedUsername();
+    setSavedUsername(username);
+  }, []);
 
   const onFinish = async (values: LoginForm) => {
     setLoading(true);
     try {
-      // 密码加密已在 loginApi 内部处理，使用与旧系统相同的 securityEncode 算法
-      const response = await loginApi(
+      const result = await loginApi(
         values.username,
         values.password,
         values.language
       );
+      console.log('----result:', result)
+      if (result.ok) {
+        message.success('Login success! Redirecting...');
 
-      // 检查响应状态
-      if (response.ok) {
-        const redirectUrl = response.url;
-        if (redirectUrl.includes('boadmin.jsp') || redirectUrl.includes('botrans.jsp')) {
-          message.success('Login success! Redirecting...');
-
-          // 存储登录信息到 zustand（用于后续 API 调用）
-          setAuthLogin({
-            loginID: values.username,
-            env: '',
-            sessionKey: '', // 旧系统通过 Cookie 管理
-            language: values.language,
-            entityCode: '',
-            entityName: '',
-          });
-
-          setTimeout(() => {
-            navigate('/admin');
-          }, 500);
-        } else {
-          message.error('Login failed. Please check your credentials.');
+        // Save username if remember me is checked
+        if (values.rememberMe) {
+          saveUsername(values.username);
         }
+
+        // 存储登录信息到 zustand（用于后续 API 调用）
+        setAuthLogin({
+          loginID: values.username,
+          env: '',
+          sessionKey: result.sessionKey || '',
+          language: values.language,
+          entityCode: '',
+          entityName: '',
+        });
+
+        setTimeout(() => {
+          navigate('/admin');
+        }, 500);
       } else {
-        message.error('Login failed. Please check your credentials.');
+        message.error(result.error || 'Login failed. Please check your credentials.');
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -81,7 +88,7 @@ const LoginPage: React.FC = () => {
       >
         <div
           style={{
-            background: '#C2525F',
+            background: '#1677ff',
             color: 'white',
             padding: '24px',
             textAlign: 'center',
@@ -100,7 +107,9 @@ const LoginPage: React.FC = () => {
             autoComplete="off"
             layout="vertical"
             initialValues={{
+              username: savedUsername,
               language: 0,
+              rememberMe: !!savedUsername,
             }}
           >
             <Form.Item
@@ -137,6 +146,10 @@ const LoginPage: React.FC = () => {
               </Select>
             </Form.Item>
 
+            <Form.Item name="rememberMe" valuePropName="checked" style={{ marginBottom: 16 }}>
+              <Checkbox>Remember Username</Checkbox>
+            </Form.Item>
+
             <Form.Item style={{ marginBottom: 0 }}>
               <Button
                 type="primary"
@@ -144,10 +157,6 @@ const LoginPage: React.FC = () => {
                 size="large"
                 block
                 loading={loading}
-                style={{
-                  background: '#C2525F',
-                  borderColor: '#C2525F',
-                }}
               >
                 Login
               </Button>
