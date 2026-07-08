@@ -1,19 +1,23 @@
-import React from 'react';
-import { Layout, Menu, Button, Dropdown, Space, Typography } from 'antd';
+import React, { useMemo } from 'react';
+import { Layout, Menu, Button, Dropdown, Space, Typography, Spin, message } from 'antd';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   UserOutlined,
   LogoutOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useAuthStore } from '../../stores/authStore';
 import { useSystemInfo } from '../../hooks/useSystemInfo';
+import { useMenu } from '../../hooks/useMenu';
 import { logout as logoutApi } from '../../api/request';
 import { useTabStore } from '../../stores/tabStore';
 import type { Tab } from '../../stores/tabStore';
+import { getPageByFunctionId } from '../../config/menuPages';
+import type { MenuTreeNode } from '../../types/api/menu';
 import TabBar from '../../components/Breadcrumb/TabBar';
-import MultiTabRouter, { getPageConfig } from '../../components/Breadcrumb/MultiTabRouter';
+import MultiTabRouter from '../../components/Breadcrumb/MultiTabRouter';
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
@@ -34,62 +38,29 @@ const BasicLayout: React.FC<BasicLayoutProps> = ({ collapsed, setCollapsed }) =>
   const systemInfo = useSystemInfo();
   const logout = useAuthStore((state) => state.logout);
   const { addTab } = useTabStore();
+  const { tree, loaded, loading } = useMenu();
 
-  // 打开页面（注册 Tab）
-  const openPage = (path: string) => {
-    const config = getPageConfig(path);
-    if (!config) return;
+  // 按 functionid 打开页面（注册 Tab）
+  const openPageByFuncId = (functionid: string) => {
+    const entry = getPageByFunctionId(functionid);
+    if (!entry) {
+      message.info('功能开发中');
+      return;
+    }
 
     const tab: Tab = {
-      key: path,
-      title: config.title,
-      path: path,
+      key: entry.path,
+      title: entry.title,
+      path: entry.path,
       isClosable: true,
     };
-
     addTab(tab);
   };
 
-  // 菜单配置
-  const menuItems: MenuProps['items'] = [
-    {
-      key: 'master-setup',
-      label: 'Master Setup',
-      children: [
-        {
-          key: '/admin/master/curr-setup',
-          label: 'Currency Setup',
-          onClick: () => openPage('/admin/master/curr-setup'),
-        },
-        {
-          key: '/admin/master/curr-pair-setup',
-          label: 'Currency Pair Setup',
-          onClick: () => openPage('/admin/master/curr-pair-setup'),
-        },
-        {
-          key: '/admin/master/counter-party-setup',
-          label: 'Counter Party Setup',
-          onClick: () => openPage('/admin/master/counter-party-setup'),
-        },
-        {
-          key: '/admin/master/gl-posting-setup',
-          label: 'GL Posting Setup',
-          onClick: () => openPage('/admin/master/gl-posting-setup'),
-        },
-      ],
-    },
-    {
-      key: 'inquiry',
-      label: 'Inquiry',
-      children: [
-        {
-          key: '/admin/inquiry/fx-utilization',
-          label: 'FX Utilization',
-          onClick: () => openPage('/admin/inquiry/fx-utilization'),
-        },
-      ],
-    },
-  ];
+  // 把后端菜单树转换成 antd Menu 的 items 结构
+  const menuItems: MenuProps['items'] = useMemo(() => {
+    return buildAntdMenuItems(tree, openPageByFuncId);
+  }, [tree]);
 
   // 登出处理
   const handleLogout = async () => {
@@ -156,13 +127,25 @@ const BasicLayout: React.FC<BasicLayoutProps> = ({ collapsed, setCollapsed }) =>
         </div>
         {/* 菜单 */}
         <div style={{ flex: 1, overflow: 'auto' }}>
-          <Menu
-            theme="dark"
-            mode="inline"
-            defaultSelectedKeys={['1']}
-            items={menuItems}
-            style={{ height: '100%', borderRight: 0 }}
-          />
+          {loading && !loaded ? (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                padding: '24px 0',
+                color: 'rgba(255,255,255,0.65)',
+              }}
+            >
+              <Spin indicator={<LoadingOutlined style={{ fontSize: 20 }} spin />} />
+            </div>
+          ) : (
+            <Menu
+              theme="dark"
+              mode="inline"
+              items={menuItems}
+              style={{ height: '100%', borderRight: 0 }}
+            />
+          )}
         </div>
       </Sider>
 
@@ -225,5 +208,41 @@ const BasicLayout: React.FC<BasicLayoutProps> = ({ collapsed, setCollapsed }) =>
     </Layout>
   );
 };
+
+/**
+ * 把后端菜单树（MenuTreeNode[]）转换成 antd Menu 的 items 结构。
+ *
+ * - 分组节点（isHeader=true）→ 带 children 的可展开项
+ * - 叶子节点（isHeader=false）：
+ *   - functionid 在 FUNCTIONID_TO_PAGE 命中 → 可点击，onClick 开 Tab
+ *   - 未命中 → 灰显（disabled），title 提示"功能开发中"
+ */
+function buildAntdMenuItems(
+  nodes: MenuTreeNode[],
+  openPageByFuncId: (functionid: string) => void
+): NonNullable<MenuProps['items']> {
+  return nodes.map((node) => {
+    if (node.isHeader) {
+      return {
+        key: node.key,
+        label: node.label,
+        children:
+          node.children.length > 0
+            ? buildAntdMenuItems(node.children, openPageByFuncId)
+            : undefined,
+      };
+    }
+
+    // 叶子节点
+    const entry = node.functionid ? getPageByFunctionId(node.functionid) : undefined;
+    return {
+      key: node.key,
+      label: node.label,
+      disabled: !entry, // 无对应页面则灰显
+      title: entry ? node.label : '功能开发中',
+      onClick: entry && node.functionid ? () => openPageByFuncId(node.functionid!) : undefined,
+    };
+  }) as NonNullable<MenuProps['items']>;
+}
 
 export default BasicLayout;

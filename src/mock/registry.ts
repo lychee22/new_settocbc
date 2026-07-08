@@ -13,6 +13,7 @@ import {
   getNostroAccNo,
   getCounterParty,
 } from './handlers/masterSetup';
+import { getUserMenu } from './handlers/menu';
 
 /**
  * 消息名 -> handler 的路由表。
@@ -40,6 +41,9 @@ export const MESSAGE_HANDLERS: Record<string, MockHandler> = {
 
   // ---- Counter Party Setup ----
   'counterPartySetupGridMsg_GetCounterParty': getCounterParty,
+
+  // ---- 动态菜单 ----
+  'userAccessGridMsg_GetUserMenu': getUserMenu,
 };
 
 /**

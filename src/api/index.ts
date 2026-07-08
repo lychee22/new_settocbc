@@ -13,3 +13,4 @@ export type { SessionKeyInfo } from './request';
 
 // 业务模块（按模块逐个 re-export，新增模块在此追加）
 export { currencySetup } from './modules/currencySetup';
+export { menu } from './modules/menu';

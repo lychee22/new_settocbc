@@ -3,7 +3,9 @@ import { Form, Input, Button, Select, Checkbox, message, Card } from 'antd';
 import { UserOutlined, LockOutlined, GlobalOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { login as loginApi } from '../../api/request';
+import { menu as menuApi } from '../../api/modules/menu';
 import { useAuthStore } from '../../stores/authStore';
+import { useMenuStore } from '../../stores/menuStore';
 import {
   clearSavedUsername,
   getSavedUsername,
@@ -34,6 +36,7 @@ const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login: setAuthLogin } = useAuthStore();
+  const { setMenu } = useMenuStore();
 
   const onFinish = async (values: LoginForm) => {
     setLoading(true);
@@ -71,6 +74,19 @@ const LoginPage: React.FC = () => {
           version: result.version || '',
         };
         setAuthLogin(session);
+
+        // 登录成功后立即拉取动态菜单（存入 menuStore）。
+        // 失败不阻塞跳转，进 BasicLayout 后 useMenu hook 会兜底重试。
+        try {
+          const items = await menuApi.getUserMenu();
+          setMenu(items);
+        } catch (menuErr) {
+          // eslint-disable-next-line no-console
+          console.warn(
+            '[Login] 菜单加载失败，将由 useMenu 重试：',
+            menuErr instanceof Error ? menuErr.message : menuErr
+          );
+        }
 
         setTimeout(() => {
           navigate('/admin');
