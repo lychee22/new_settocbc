@@ -6,7 +6,12 @@ export interface NetMessage {
   e?: string;          // 错误信息
   lb?: unknown[];      // 行数据
   lvb?: unknown[];     // 向量数据
-  mhvb?: unknown[];
+  /**
+   * Multiple HVB —— 多块业务数据。
+   * 旧系统约定 mhvb 为对象（如 { approvallist: [...], cpty: [...] }），
+   * 个别接口用数组。这里放宽为对象，业务层自行断言具体形状。
+   */
+  mhvb?: Record<string, unknown>;
   // 元数据
   euid?: string;
   uid?: string;
@@ -19,6 +24,9 @@ export interface NetMessage {
   l?: number;
   ch?: string;
   env?: string;
+  // Override 提示（sts===1 时存在）
+  ovrinfo?: { override: boolean; overridemsg: string };
+  ovrrule?: string;
 }
 
 // 登录请求参数
@@ -39,6 +47,17 @@ export interface UserSession {
   securityID?: string;
   systemCode?: string;
   localCcy?: string;
+  /**
+   * 系统环境（如 'Development' / 'Production'），从 getSystemInfo() 异步填充。
+   * 不参与 NetMsgMeta，仅用于 BasicLayout header 显示。
+   */
+  sysEnv?: string;
+  /**
+   * BO 全版本号（来自 GetSessionKeyServlet）。
+   * 所有业务请求的 metadata.v 字段使用此值，
+   * 后端 validateBOVersion 会与 BOVersion.BO_VERSION 严格校验。
+   */
+  version: string;
 }
 
 // 系统信息 (来自 sysParamSetupGridMsg_GetSysDate)

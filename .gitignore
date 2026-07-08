@@ -12,6 +12,17 @@ dist
 dist-ssr
 *.local
 
+# Windows 误创建的设备名文件
+nul
+
+# 构建产物与缓存
+.cache
+.parcel-cache
+.vite
+
+# 环境变量（如含密钥时改用 .env.local；当前 .env/.env.mock 仅含 URL 与 mock 开关，需入库）
+# .env.local
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

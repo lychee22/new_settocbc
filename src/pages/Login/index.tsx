@@ -1,10 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Form, Input, Button, Select, Checkbox, message, Card } from 'antd';
 import { UserOutlined, LockOutlined, GlobalOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { login as loginApi } from '../../api/request';
 import { useAuthStore } from '../../stores/authStore';
-import { getSavedUsername, saveUsername } from '../../utils/storage';
+import {
+  clearSavedUsername,
+  getSavedUsername,
+  saveUsername,
+} from '../../utils/storage';
+import type { UserSession } from '../../types';
 
 const { Option } = Select;
 
@@ -15,17 +20,20 @@ interface LoginForm {
   rememberMe?: boolean;
 }
 
+/**
+ * 同步读取已存用户名，作为 Form initialValues。
+ *
+ * 注意：必须同步读取，不能放进 useEffect 异步 setState。
+ * 原因：antd Form 的 initialValues 只在首次挂载时生效，
+ * 若用 useState + useEffect 异步填充，首次渲染时值为空字符串，
+ * state 更新后 initialValues 不会重新应用 → 用户名永远填不进去。
+ */
+const SAVED_USERNAME = getSavedUsername();
+
 const LoginPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
-  const [savedUsername, setSavedUsername] = useState('');
   const navigate = useNavigate();
   const { login: setAuthLogin } = useAuthStore();
-
-  // Load saved username on mount
-  useEffect(() => {
-    const username = getSavedUsername();
-    setSavedUsername(username);
-  }, []);
 
   const onFinish = async (values: LoginForm) => {
     setLoading(true);
@@ -42,17 +50,27 @@ const LoginPage: React.FC = () => {
         // Save username if remember me is checked
         if (values.rememberMe) {
           saveUsername(values.username);
+        } else {
+          // 取消勾选时清除已存用户名
+          clearSavedUsername();
         }
 
         // 存储登录信息到 zustand（用于后续 API 调用）
-        setAuthLogin({
+        // env/version/systemCode/entityCode/entityName/localCcy：登录接口返回
+        // （真实环境来自 GetSessionKeyServlet，后端 validateBOVersion 校验）
+        // 这些字段是业务请求 NetMsgMeta 必填，否则后端返回 -10110003。
+        const session: UserSession = {
           loginID: values.username,
-          env: '',
+          env: result.env || '',
           sessionKey: result.sessionKey || '',
           language: values.language,
-          entityCode: '',
-          entityName: '',
-        });
+          entityCode: result.entityCode || '',
+          entityName: result.entityName || '',
+          systemCode: result.systemCode || '',
+          localCcy: result.localCcy || '',
+          version: result.version || '',
+        };
+        setAuthLogin(session);
 
         setTimeout(() => {
           navigate('/admin');
@@ -107,9 +125,9 @@ const LoginPage: React.FC = () => {
             autoComplete="off"
             layout="vertical"
             initialValues={{
-              username: savedUsername,
+              username: SAVED_USERNAME,
               language: 0,
-              rememberMe: !!savedUsername,
+              rememberMe: !!SAVED_USERNAME,
             }}
           >
             <Form.Item
