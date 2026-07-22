@@ -57,10 +57,62 @@ const BasicLayout: React.FC<BasicLayoutProps> = ({ collapsed, setCollapsed }) =>
     addTab(tab);
   };
 
-  // 把后端菜单树转换成 antd Menu 的 items 结构
-  const menuItems: MenuProps['items'] = useMemo(() => {
-    return buildAntdMenuItems(tree, openPageByFuncId);
-  }, [tree]);
+  // 菜单配置
+  const menuItems: MenuProps['items'] = [
+    {
+      key: 'master-setup',
+      label: 'Master Setup',
+      children: [
+        {
+          key: '/admin/master/curr-setup',
+          label: 'Currency Setup',
+          onClick: () => openPage('/admin/master/curr-setup'),
+        },
+        {
+          key: '/admin/master/curr-pair-setup',
+          label: 'Currency Pair Setup',
+          onClick: () => openPage('/admin/master/curr-pair-setup'),
+        },
+        {
+          key: '/admin/master/counter-party-setup',
+          label: 'Counter Party Setup',
+          onClick: () => openPage('/admin/master/counter-party-setup'),
+        },
+        {
+          key: '/admin/master/gl-posting-setup',
+          label: 'GL Posting Setup',
+          onClick: () => openPage('/admin/master/gl-posting-setup'),
+        },
+      ],
+    },
+    {
+      key: 'inquiry',
+      label: 'Inquiry',
+      children: [
+        {
+          key: '/admin/inquiry/fx-utilization',
+          label: 'FX Utilization',
+          onClick: () => openPage('/admin/inquiry/fx-utilization'),
+        },
+      ],
+    },
+    {
+      key: 'learn',
+      label: 'Learn',
+      children: [
+        {
+          key: '/admin/count',
+          label: 'Count',
+          onClick: () => openPage('/admin/count'),
+        },
+        {
+          key:'/admin/useeffect',
+          label:'UseEffect',
+          
+        }
+      ],
+    },
+  ];
 
   // 登出处理
   const handleLogout = async () => {
