@@ -89,6 +89,17 @@ const BasicLayout: React.FC<BasicLayoutProps> = ({ collapsed, setCollapsed }) =>
         },
       ],
     },
+    {
+      key: 'learn',
+      label: 'Learn',
+      children: [
+        {
+          key: '/admin/count',
+          label: 'Count',
+          onClick: () => openPage('/admin/count'),
+        },
+      ],
+    },
   ];
 
   // 登出处理
