@@ -32,7 +32,7 @@ export interface CurrencyMaster {
   deliverable?: string;
   /** 货币标志：MAJ / MIN */
   ccyflag?: string;
-  /** CLS 标志：MAJ / MIN */
+  /** CLS 标志：Y = 是 / N = 否 */
   cls?: string;
   /** 最后更新人 */
   lupuser?: string;
