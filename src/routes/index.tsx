@@ -7,7 +7,6 @@ import { useAuthStore } from '../stores/authStore';
 // 认证守卫组件 - 需要登录
 const RequireAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-
   if (!isAuthenticated) {
     return <Navigate to="/new-login" replace />;
   }

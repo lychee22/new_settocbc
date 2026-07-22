@@ -13,7 +13,7 @@
 import type { NetMessage } from '../../types';
 import type { MockHandler, MockRequest } from '../types';
 
-/** 内置货币主数据（演示静态数据返回）。 */
+/** 内置货币主数据（演示用；create/update/delete 会真实落库以便联调）。 */
 const CURRENCY_MASTER: Record<string, Record<string, string>> = {
   USD: {
     curr: 'USD',
@@ -25,7 +25,7 @@ const CURRENCY_MASTER: Record<string, Record<string, string>> = {
     gl: '1001',
     deliverable: 'true',
     ccyflag: 'MAJ',
-    cls: 'MAJ',
+    cls: 'Y',
     lupuser: 'ADMIN',
     luptime: '2026-04-23 10:00:00',
   },
@@ -39,7 +39,7 @@ const CURRENCY_MASTER: Record<string, Record<string, string>> = {
     gl: '1002',
     deliverable: 'true',
     ccyflag: 'MAJ',
-    cls: 'MAJ',
+    cls: 'Y',
     lupuser: 'ADMIN',
     luptime: '2026-04-23 10:00:00',
   },
@@ -53,7 +53,77 @@ const CURRENCY_MASTER: Record<string, Record<string, string>> = {
     gl: '1003',
     deliverable: 'true',
     ccyflag: 'MAJ',
-    cls: 'MAJ',
+    cls: 'Y',
+    lupuser: 'ADMIN',
+    luptime: '2026-04-23 10:00:00',
+  },
+  EUR: {
+    curr: 'EUR',
+    desc: 'Euro',
+    dpsamt: '2',
+    dayperyear: '360',
+    margingrp: '1',
+    tradelmt: '8000000',
+    gl: '1004',
+    deliverable: 'true',
+    ccyflag: 'MAJ',
+    cls: 'Y',
+    lupuser: 'ADMIN',
+    luptime: '2026-04-23 10:00:00',
+  },
+  GBP: {
+    curr: 'GBP',
+    desc: 'British Pound',
+    dpsamt: '2',
+    dayperyear: '365',
+    margingrp: '2',
+    tradelmt: '6000000',
+    gl: '1005',
+    deliverable: 'true',
+    ccyflag: 'MAJ',
+    cls: 'Y',
+    lupuser: 'ADMIN',
+    luptime: '2026-04-23 10:00:00',
+  },
+  JPY: {
+    curr: 'JPY',
+    desc: 'Japanese Yen',
+    dpsamt: '0',
+    dayperyear: '360',
+    margingrp: '2',
+    tradelmt: '3000000',
+    gl: '1006',
+    deliverable: 'true',
+    ccyflag: 'MAJ',
+    cls: 'Y',
+    lupuser: 'ADMIN',
+    luptime: '2026-04-23 10:00:00',
+  },
+  CNY: {
+    curr: 'CNY',
+    desc: 'Chinese Yuan',
+    dpsamt: '2',
+    dayperyear: '365',
+    margingrp: '3',
+    tradelmt: '2000000',
+    gl: '1007',
+    deliverable: 'true',
+    ccyflag: 'MIN',
+    cls: 'N',
+    lupuser: 'ADMIN',
+    luptime: '2026-04-23 10:00:00',
+  },
+  AUD: {
+    curr: 'AUD',
+    desc: 'Australian Dollar',
+    dpsamt: '2',
+    dayperyear: '365',
+    margingrp: '2',
+    tradelmt: '1500000',
+    gl: '1008',
+    deliverable: 'true',
+    ccyflag: 'MAJ',
+    cls: 'Y',
     lupuser: 'ADMIN',
     luptime: '2026-04-23 10:00:00',
   },
@@ -91,7 +161,7 @@ export const searchCcyMaster: MockHandler = (req: MockRequest): NetMessage => {
   const index = req?.mhvb?.dtblindex?.[0] ?? { offset: 0, length: 10 };
 
   let rows = Object.values(CURRENCY_MASTER);
-  // 简单过滤演示
+  // 过滤演示
   if (criteria.curr) {
     rows = rows.filter((r) => r.curr.includes(String(criteria.curr).toUpperCase()));
   }
@@ -99,6 +169,9 @@ export const searchCcyMaster: MockHandler = (req: MockRequest): NetMessage => {
     rows = rows.filter((r) =>
       r.desc.toLowerCase().includes(String(criteria.desc).toLowerCase())
     );
+  }
+  if (criteria.ccyflag) {
+    rows = rows.filter((r) => r.ccyflag === criteria.ccyflag);
   }
 
   const total = rows.length;
@@ -117,10 +190,30 @@ export const searchCcyMaster: MockHandler = (req: MockRequest): NetMessage => {
   };
 };
 
-/** currencySetupGridMsg_CreateCcyMaster —— 新建，回显并补 luptime/lupuser。 */
+/** currencySetupGridMsg_CreateCcyMaster —— 新建，落库并补 luptime/lupuser；重复返回 -1。 */
 export const createCcyMaster: MockHandler = (req: MockRequest): NetMessage => {
   const input = req?.hvb?.[0] ?? {};
-  const row = { ...input, lupuser: 'ADMIN', luptime: NOW };
+  const curr = String(input.curr ?? '').toUpperCase();
+  if (!curr) {
+    return {
+      n: 'currencySetupGridMsg_CreateCcyMaster',
+      sts: -1,
+      e: '货币代码不能为空',
+      hvb: [],
+      mhvb: {},
+    };
+  }
+  if (CURRENCY_MASTER[curr]) {
+    return {
+      n: 'currencySetupGridMsg_CreateCcyMaster',
+      sts: -1,
+      e: '货币代码已存在',
+      hvb: [],
+      mhvb: {},
+    };
+  }
+  const row: Record<string, string> = { ...input, curr, lupuser: 'ADMIN', luptime: NOW };
+  CURRENCY_MASTER[curr] = row;
   return {
     n: 'currencySetupGridMsg_CreateCcyMaster',
     sts: 0,
@@ -129,10 +222,28 @@ export const createCcyMaster: MockHandler = (req: MockRequest): NetMessage => {
   };
 };
 
-/** currencySetupGridMsg_UpdateCcyMaster —— 更新，回显最新数据。 */
+/** currencySetupGridMsg_UpdateCcyMaster —— 更新，落库并刷新 luptime；不存在返回 -1。 */
 export const updateCcyMaster: MockHandler = (req: MockRequest): NetMessage => {
   const input = req?.hvb?.[0] ?? {};
-  const row = { ...input, lupuser: 'ADMIN', luptime: NOW };
+  const curr = String(input.curr ?? '').toUpperCase();
+  const existing = CURRENCY_MASTER[curr];
+  if (!existing) {
+    return {
+      n: 'currencySetupGridMsg_UpdateCcyMaster',
+      sts: -1,
+      e: `Currency not found: ${curr}`,
+      hvb: [],
+      mhvb: {},
+    };
+  }
+  const row: Record<string, string> = {
+    ...existing,
+    ...input,
+    curr,
+    lupuser: existing.lupuser ?? 'ADMIN',
+    luptime: NOW,
+  };
+  CURRENCY_MASTER[curr] = row;
   return {
     n: 'currencySetupGridMsg_UpdateCcyMaster',
     sts: 0,
@@ -141,9 +252,19 @@ export const updateCcyMaster: MockHandler = (req: MockRequest): NetMessage => {
   };
 };
 
-/** currencySetupGridMsg_DeleteCcyMaster —— 删除，成功返回空 hvb。 */
+/** currencySetupGridMsg_DeleteCcyMaster —— 删除，成功返回空 hvb；不存在返回 -1。 */
 export const deleteCcyMaster: MockHandler = (req: MockRequest): NetMessage => {
-  const curr = req?.hvb?.[0]?.curr as string | undefined;
+  const curr = String(req?.hvb?.[0]?.curr ?? '').toUpperCase();
+  if (!CURRENCY_MASTER[curr]) {
+    return {
+      n: 'currencySetupGridMsg_DeleteCcyMaster',
+      sts: -1,
+      e: `Currency not found: ${curr}`,
+      hvb: [],
+      mhvb: {},
+    };
+  }
+  delete CURRENCY_MASTER[curr];
   return {
     n: 'currencySetupGridMsg_DeleteCcyMaster',
     sts: 0,

@@ -8,6 +8,7 @@ import CurrPairSetup from '../../pages/MasterSetup/CurrPairSetup';
 import CounterPartySetup from '../../pages/MasterSetup/CounterPartySetup';
 import GlPostingSetup from '../../pages/MasterSetup/GlPostingSetup';
 import FxUtilizationInq from '../../pages/Inquiry/FxUtilizationInq';
+import Count from '../../pages/Learn/Count';
 
 // 页面配置
 const PAGE_CONFIG: Record<string, { title: string; component: React.ComponentType }> = {
@@ -16,6 +17,7 @@ const PAGE_CONFIG: Record<string, { title: string; component: React.ComponentTyp
   '/admin/master/counter-party-setup': { title: 'Counter Party Setup', component: CounterPartySetup },
   '/admin/master/gl-posting-setup': { title: 'GL Posting Setup', component: GlPostingSetup },
   '/admin/inquiry/fx-utilization': { title: 'FX Utilization', component: FxUtilizationInq },
+  '/admin/count': {title:'Count', component: Count}
 };
 
 // 获取页面配置
