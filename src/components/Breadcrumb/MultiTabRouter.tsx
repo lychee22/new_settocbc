@@ -9,6 +9,7 @@ import CounterPartySetup from '../../pages/MasterSetup/CounterPartySetup';
 import GlPostingSetup from '../../pages/MasterSetup/GlPostingSetup';
 import FxUtilizationInq from '../../pages/Inquiry/FxUtilizationInq';
 import Count from '../../pages/Learn/Count';
+import UseEffect from '../../pages/Learn/Day2';
 
 // 页面配置
 const PAGE_CONFIG: Record<string, { title: string; component: React.ComponentType }> = {
@@ -17,15 +18,18 @@ const PAGE_CONFIG: Record<string, { title: string; component: React.ComponentTyp
   '/admin/master/counter-party-setup': { title: 'Counter Party Setup', component: CounterPartySetup },
   '/admin/master/gl-posting-setup': { title: 'GL Posting Setup', component: GlPostingSetup },
   '/admin/inquiry/fx-utilization': { title: 'FX Utilization', component: FxUtilizationInq },
-  '/admin/count': {title:'Count', component: Count}
+  '/admin/count': { title: 'Count', component: Count },
+  '/admin/useeffect': { title: 'UseEffect', component: UseEffect },
 };
 
 // 获取页面配置
+// eslint-disable-next-line react-refresh/only-export-components
 export function getPageConfig(path: string): { title: string; component: React.ComponentType } | null {
   return PAGE_CONFIG[path] || null;
 }
 
 // 注册新页面（打开新 tab）
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePageRegister() {
   const { addTab } = useTabStore();
 

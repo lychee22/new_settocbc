@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Layout, Menu, Button, Dropdown, Space, Typography, Spin, message } from 'antd';
+import React from 'react';
+import { Layout, Menu, Button, Dropdown, Space, Typography, Spin } from 'antd';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -14,8 +14,6 @@ import { useMenu } from '../../hooks/useMenu';
 import { logout as logoutApi } from '../../api/request';
 import { useTabStore } from '../../stores/tabStore';
 import type { Tab } from '../../stores/tabStore';
-import { getPageByFunctionId } from '../../config/menuPages';
-import type { MenuTreeNode } from '../../types/api/menu';
 import TabBar from '../../components/Breadcrumb/TabBar';
 import MultiTabRouter from '../../components/Breadcrumb/MultiTabRouter';
 
@@ -38,26 +36,21 @@ const BasicLayout: React.FC<BasicLayoutProps> = ({ collapsed, setCollapsed }) =>
   const systemInfo = useSystemInfo();
   const logout = useAuthStore((state) => state.logout);
   const { addTab } = useTabStore();
-  const { tree, loaded, loading } = useMenu();
+  // 动态菜单基础设施保留，目前不消费 tree（菜单仍为硬编码）
+  const { loaded, loading } = useMenu();
 
-  // 按 functionid 打开页面（注册 Tab）
-  const openPageByFuncId = (functionid: string) => {
-    const entry = getPageByFunctionId(functionid);
-    if (!entry) {
-      message.info('功能开发中');
-      return;
-    }
-
+  // 打开页面（注册 Tab）—— 通过 path 直接打开
+  const openPage = (path: string, title: string) => {
     const tab: Tab = {
-      key: entry.path,
-      title: entry.title,
-      path: entry.path,
+      key: path,
+      title,
+      path,
       isClosable: true,
     };
     addTab(tab);
   };
 
-  // 菜单配置
+  // 菜单配置（硬编码）
   const menuItems: MenuProps['items'] = [
     {
       key: 'master-setup',
@@ -66,22 +59,22 @@ const BasicLayout: React.FC<BasicLayoutProps> = ({ collapsed, setCollapsed }) =>
         {
           key: '/admin/master/curr-setup',
           label: 'Currency Setup',
-          onClick: () => openPage('/admin/master/curr-setup'),
+          onClick: () => openPage('/admin/master/curr-setup', 'Currency Setup'),
         },
         {
           key: '/admin/master/curr-pair-setup',
           label: 'Currency Pair Setup',
-          onClick: () => openPage('/admin/master/curr-pair-setup'),
+          onClick: () => openPage('/admin/master/curr-pair-setup', 'Currency Pair Setup'),
         },
         {
           key: '/admin/master/counter-party-setup',
           label: 'Counter Party Setup',
-          onClick: () => openPage('/admin/master/counter-party-setup'),
+          onClick: () => openPage('/admin/master/counter-party-setup', 'Counter Party Setup'),
         },
         {
           key: '/admin/master/gl-posting-setup',
           label: 'GL Posting Setup',
-          onClick: () => openPage('/admin/master/gl-posting-setup'),
+          onClick: () => openPage('/admin/master/gl-posting-setup', 'GL Posting Setup'),
         },
       ],
     },
@@ -92,7 +85,7 @@ const BasicLayout: React.FC<BasicLayoutProps> = ({ collapsed, setCollapsed }) =>
         {
           key: '/admin/inquiry/fx-utilization',
           label: 'FX Utilization',
-          onClick: () => openPage('/admin/inquiry/fx-utilization'),
+          onClick: () => openPage('/admin/inquiry/fx-utilization', 'FX Utilization'),
         },
       ],
     },
@@ -103,13 +96,13 @@ const BasicLayout: React.FC<BasicLayoutProps> = ({ collapsed, setCollapsed }) =>
         {
           key: '/admin/count',
           label: 'Count',
-          onClick: () => openPage('/admin/count'),
+          onClick: () => openPage('/admin/count', 'Count'),
         },
         {
-          key:'/admin/useeffect',
-          label:'UseEffect',
-          
-        }
+          key: '/admin/useeffect',
+          label: 'UseEffect',
+          onClick: () => openPage('/admin/useeffect', 'UseEffect'),
+        },
       ],
     },
   ];
@@ -260,41 +253,5 @@ const BasicLayout: React.FC<BasicLayoutProps> = ({ collapsed, setCollapsed }) =>
     </Layout>
   );
 };
-
-/**
- * 把后端菜单树（MenuTreeNode[]）转换成 antd Menu 的 items 结构。
- *
- * - 分组节点（isHeader=true）→ 带 children 的可展开项
- * - 叶子节点（isHeader=false）：
- *   - functionid 在 FUNCTIONID_TO_PAGE 命中 → 可点击，onClick 开 Tab
- *   - 未命中 → 灰显（disabled），title 提示"功能开发中"
- */
-function buildAntdMenuItems(
-  nodes: MenuTreeNode[],
-  openPageByFuncId: (functionid: string) => void
-): NonNullable<MenuProps['items']> {
-  return nodes.map((node) => {
-    if (node.isHeader) {
-      return {
-        key: node.key,
-        label: node.label,
-        children:
-          node.children.length > 0
-            ? buildAntdMenuItems(node.children, openPageByFuncId)
-            : undefined,
-      };
-    }
-
-    // 叶子节点
-    const entry = node.functionid ? getPageByFunctionId(node.functionid) : undefined;
-    return {
-      key: node.key,
-      label: node.label,
-      disabled: !entry, // 无对应页面则灰显
-      title: entry ? node.label : '功能开发中',
-      onClick: entry && node.functionid ? () => openPageByFuncId(node.functionid!) : undefined,
-    };
-  }) as NonNullable<MenuProps['items']>;
-}
 
 export default BasicLayout;
