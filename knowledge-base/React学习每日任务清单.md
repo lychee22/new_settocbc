@@ -163,10 +163,42 @@ function Child({ onSend, message }) {
 
 **今日验收**：
 1. useEffect第二个参数有哪几种？分别什么效果？
+
+   ```
+   三种依赖项
+   useEffect(()=>{
+   	const name = 'zz'
+   	console.log('初次渲染时调用，挂载/卸载'); // 相当于ReactComponentDid
+   	return {name};               // 卸载
+   },[])
+   
+   useEffect(()=>{
+   	console.log('更新时调用，每次渲染都执行')
+   })
+   
+   useEffect(()=>{
+   	console.log('状态变化时调用')
+   },[state])
+   ```
+
 2. 父组件怎么调子组件的方法？
+
+   ```
+   1. props回调函数（函数作为参数被调用）
+   2. useRef + useImperativeHandle（推荐用法）
+   ```
+
 3. 为什么列表要加key？
 
+   ```
+   为了确保dom节点的唯一性。在diff算法比较的列表对比中，实现稳定复y
+   ```
+
+   
+
 **算法**：[ ] LeetCode第26题 删除有序数组中的重复项
+
+> 横向扫描，快慢指针。
 
 ---
 

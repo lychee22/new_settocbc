@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react"
+import Parent from './components/parent' // 新增:父子组件通信演示区
+import Computer from "./components/Computer"
 
 
 const Count:React.FC = () => {
@@ -26,9 +28,16 @@ const Count:React.FC = () => {
 
     return (
         <>
-            <div></div>
-            <div onClick={handleClick}>{count}</div>
+            {/* === 原有 useState + useEffect 演示(完全保留) === */}
+            <div style={{ marginBottom: 16 }}>
+                <div style={{ marginBottom: 8 }}>useState + useEffect 演示(点数字 +1)</div>
+                <div onClick={handleClick}>{count}</div>
+            </div>
+
+            {/* === 新增:父子组件通信演示区 === */}
+            <Parent />
+            <Computer num={count} changeNum={setCount}/>
         </>
     )
 }
-export default Count 
+export default Count
